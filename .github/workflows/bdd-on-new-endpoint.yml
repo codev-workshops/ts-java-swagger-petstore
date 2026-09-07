@@ -1,0 +1,61 @@
+name: BDD on new endpoint
+
+# Starts a Devin session whenever a pull request touches the OpenAPI spec.
+# The session writes Cucumber feature files for the newly added endpoint(s) and
+# pushes them back onto the SAME branch that triggered this run, so the endpoint
+# and its BDD coverage are reviewed together in the existing pull request.
+#
+# Requirements:
+#   - A `DEVIN_API_KEY` repository secret (Settings > Secrets and variables >
+#     Actions) holding a Devin API key.
+#   - For pull requests from forks, the head branch lives in the fork, so Devin
+#     can only push to it if the PR has "Allow edits by maintainers" enabled and
+#     the token Devin uses has write access to the fork. Pull requests from
+#     branches in this repository work directly.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    paths:
+      - src/main/resources/openapi.yaml
+
+jobs:
+  request-bdd-coverage:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Start Devin session to author BDD scenarios
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          # Populated only on pull_request events, which is the trigger used here.
+          HEAD_REF: ${{ github.head_ref }}
+          HEAD_REPO: ${{ github.event.pull_request.head.repo.full_name }}
+          BASE_REF: ${{ github.base_ref }}
+          BASE_REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+        run: |
+          set -euo pipefail
+
+          cat > prompt.txt <<EOF
+          A pull request in ${BASE_REPO} changed the OpenAPI spec at src/main/resources/openapi.yaml and needs BDD coverage for the newly added endpoint(s).
+
+          Pull request: #${PR_NUMBER} (${PR_URL})
+          Head (source) branch to work on: ${HEAD_REF}
+          Head repository: ${HEAD_REPO}
+          Base branch: ${BASE_REF}
+
+          Do all of the following:
+          1. Clone ${HEAD_REPO} and check out the EXISTING branch ${HEAD_REF}. Do NOT create a new branch and do NOT open a new pull request; all work must land on ${HEAD_REF}.
+          2. Diff src/main/resources/openapi.yaml against origin/${BASE_REF} to identify the endpoint(s) (path + method) added or changed by this pull request. Only cover those endpoints.
+          3. Write BDD scenarios as Cucumber .feature files covering the new endpoint(s): happy path, request/response schema and status codes, required-parameter validation, and the documented error responses.
+          4. If no Cucumber/BDD infrastructure exists yet, bootstrap it: add the required test dependencies to pom.xml (there is currently no cucumber dependency, and junit is only declared as a junit-version property with no dependencies entry), and create the test directory and runner structure under src/test (runner class, step definitions, and src/test/resources/features).
+          5. Make sure the build and the new tests run (e.g. mvn test) before pushing.
+          6. Commit and push your changes directly to ${HEAD_REF} in ${HEAD_REPO} so they show up on pull request #${PR_NUMBER} for review. If the push is rejected because ${HEAD_REPO} is a fork without maintainer edit access, stop and report that instead of opening a separate pull request.
+          EOF
+
+          jq -n --rawfile prompt prompt.txt '{prompt: $prompt, idempotent: true}' > payload.json
+
+          curl --fail-with-body -sS -X POST https://api.devin.ai/v1/sessions \
+            -H "Authorization: Bearer ${DEVIN_API_KEY}" \
+            -H "Content-Type: application/json" \
+            -d @payload.json
