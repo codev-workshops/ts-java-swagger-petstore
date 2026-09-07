@@ -18,7 +18,9 @@ package io.swagger.petstore.controller;
 
 import io.swagger.oas.inflector.models.RequestContext;
 import io.swagger.oas.inflector.models.ResponseContext;
+import io.swagger.petstore.data.AddressData;
 import io.swagger.petstore.data.OrderData;
+import io.swagger.petstore.model.Address;
 import io.swagger.petstore.model.Order;
 import io.swagger.petstore.utils.Util;
 import org.joda.time.DateTime;
@@ -30,6 +32,7 @@ import java.util.Date;
 public class OrderController {
 
     private static OrderData orderData = new OrderData();
+    private static AddressData addressData = new AddressData();
 
     public ResponseContext getInventory(final RequestContext request) {
         return new ResponseContext()
@@ -92,5 +95,71 @@ public class OrderController {
         } else {
             return new ResponseContext().status(Response.Status.NOT_MODIFIED).entity("Order couldn't be deleted.");
         }
+    }
+
+    public ResponseContext addAddress(final RequestContext request, final Address address) {
+        if (address == null) {
+            return new ResponseContext()
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity("No Address provided. Try again?");
+        }
+
+        addressData.addAddress(address);
+        return new ResponseContext()
+                .contentType(Util.getMediaType(request))
+                .entity(address);
+    }
+
+    public ResponseContext getAddressById(final RequestContext request, final Long addressId) {
+        if (addressId == null) {
+            return new ResponseContext()
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity("No addressId provided. Try again?");
+        }
+
+        final Address address = addressData.getAddressById(addressId);
+
+        if (address != null) {
+            return new ResponseContext()
+                    .contentType(Util.getMediaType(request))
+                    .entity(address);
+        }
+
+        return new ResponseContext().status(Response.Status.NOT_FOUND).entity("Address not found");
+    }
+
+    public ResponseContext updateAddress(final RequestContext request, final Long addressId, final Address address) {
+        if (addressId == null || address == null) {
+            return new ResponseContext()
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity("No addressId or Address provided. Try again?");
+        }
+
+        if (addressData.getAddressById(addressId) == null) {
+            return new ResponseContext().status(Response.Status.NOT_FOUND).entity("Address not found");
+        }
+
+        address.setId(addressId);
+        addressData.addAddress(address);
+        return new ResponseContext()
+                .contentType(Util.getMediaType(request))
+                .entity(address);
+    }
+
+    public ResponseContext deleteAddress(final RequestContext request, final Long addressId) {
+        if (addressId == null) {
+            return new ResponseContext()
+                    .status(Response.Status.BAD_REQUEST)
+                    .entity("No addressId provided. Try again?");
+        }
+
+        if (addressData.getAddressById(addressId) == null) {
+            return new ResponseContext().status(Response.Status.NOT_FOUND).entity("Address not found");
+        }
+
+        addressData.deleteAddressById(addressId);
+        return new ResponseContext()
+                .contentType(Util.getMediaType(request))
+                .entity("Address deleted");
     }
 }
