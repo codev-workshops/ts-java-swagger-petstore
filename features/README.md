@@ -116,11 +116,11 @@ Steps written in any other form are **not** counted as coverage.
 
 | Name | Type | Purpose |
 | --- | --- | --- |
-| `DEVIN_API_KEY` | repository secret (required) | Devin API service-user key (`cog_...`) for the target organization, used as the bearer token. |
+| `DEVIN_API_KEY2` | repository secret (required) | Devin API service-user key (`cog_...`) for the target organization, used as the bearer token. |
 | `DEVIN_ORG_ID` | repository variable (required) | Devin organization to create sessions in (`org-...`); pins the org explicitly instead of inferring it from the key. |
 | `DEVIN_API_BASE_URL` | repository variable (optional) | Devin API base URL; defaults to `https://api.devin.ai`. For this org's enterprise instance set it to `https://codev.devinenterprise.com/api`. |
 
-Without `DEVIN_API_KEY`/`DEVIN_ORG_ID` the coverage report and PR comment still run, but the
+Without `DEVIN_API_KEY2`/`DEVIN_ORG_ID` the coverage report and PR comment still run, but the
 "Start Devin session" step fails.
 
 Note: the spec does not declare a `401` response explicitly (auth failures fall

@@ -59,7 +59,7 @@ jobs:
       - name: Start Devin session to fill the coverage gap
         if: steps.coverage.outcome == 'failure' && steps.coverage.outputs.uncovered_count > 0
         env:
-          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY2 }}
           DEVIN_API_BASE_URL: ${{ vars.DEVIN_API_BASE_URL || 'https://api.devin.ai' }}
           DEVIN_ORG_ID: ${{ vars.DEVIN_ORG_ID }}
           UNCOVERED: ${{ steps.coverage.outputs.uncovered }}
@@ -70,7 +70,7 @@ jobs:
           HEAD_SHA: ${{ github.event.pull_request.head.sha }}
         run: |
           if [ -z "$DEVIN_API_KEY" ]; then
-            echo "::error::DEVIN_API_KEY secret is not set; cannot start a Devin session."
+            echo "::error::DEVIN_API_KEY2 secret is not set; cannot start a Devin session."
             exit 1
           fi
           if [ -z "$DEVIN_ORG_ID" ]; then

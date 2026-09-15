@@ -45,7 +45,7 @@ Every pull request runs `.github/workflows/api-coverage.yml`, which executes
 `scripts/check_endpoint_coverage.py` to verify that every operation in
 `src/main/resources/openapi.yaml` is exercised by a Gherkin scenario in `features/`.
 When an endpoint is uncovered the job fails, comments the gap on the PR, and starts a
-Devin session (via the `DEVIN_API_KEY` repository secret) to generate the missing
+Devin session (via the `DEVIN_API_KEY2` repository secret) to generate the missing
 scenarios. See [`features/README.md`](features/README.md#pr-coverage-check) for details.
 
 ### Using the UI
