@@ -1,4 +1,5 @@
 import datetime as dt
+import json
 import os
 from pathlib import Path
 from urllib.parse import urljoin
@@ -160,6 +161,23 @@ def set_body(context):
     context.body = context.text
 
 
+@given('the request body field "{name}" is a string of {length:d} characters')
+def set_body_field_string(context, name, length):
+    body = _json_body(context)
+    body[name] = "a" * length
+    context.body = json.dumps(body)
+
+
+@given('the request body is a JSON array of {count:d} users with username prefix "{prefix}"')
+def set_user_array_body(context, count, prefix):
+    context.body = json.dumps([_user(f"{prefix}{i}") | {"id": i} for i in range(1, count + 1)])
+
+
+@given("the request body is {count:d} random bytes")
+def set_random_body(context, count):
+    context.body = os.urandom(count)
+
+
 @given('the request body is the binary contents of file "{filename}"')
 def set_binary_body(context, filename):
     context.body = (ROOT / "features" / filename).read_bytes()
@@ -168,6 +186,13 @@ def set_binary_body(context, filename):
 @given("the request body is empty")
 def set_empty_body(context):
     context.body = b""
+
+
+def _json_body(context):
+    try:
+        return json.loads(context.body)
+    except (TypeError, json.JSONDecodeError) as exc:
+        raise AssertionError("request body is not valid JSON") from exc
 
 
 @given("a pet with id {pet_id:d} exists")
@@ -239,9 +264,19 @@ def response_object(context):
     assert isinstance(_json(context), dict)
 
 
+@then("the response body should be an empty JSON array")
+def response_empty_array(context):
+    assert _json(context) == []
+
+
 @then("the response body should be a string")
 def response_string(context):
     assert isinstance(_json(context), str)
+
+
+@then('the response body should contain "{text}"')
+def response_body_contains(context, text):
+    assert text in context.response.text
 
 
 @then("the response body should contain the required fields")
@@ -294,6 +329,11 @@ def contains_field(context, name, text):
 @then('the response field "{name}" should have {count:d} items')
 def count_field(context, name, count):
     assert len(_field(_json(context), name)) == count
+
+
+@then('the response field "{name}" should have length {length:d}')
+def length_field(context, name, length):
+    assert len(_field(_json(context), name)) == length
 
 
 @then('the response field "{name}" should be an array of strings')
@@ -360,9 +400,25 @@ def object_values(context):
     )
 
 
+@then('every key in the response object should be one of "{values}"')
+def object_keys_in(context, values):
+    allowed = {item.strip() for item in values.split(",")}
+    assert set(_json(context)).issubset(allowed)
+
+
+@then("every value in the response object should be greater than or equal to {minimum:d}")
+def object_values_at_least(context, minimum):
+    assert all(value >= minimum for value in _json(context).values())
+
+
 @then('the response header "{name}" should be present')
 def header_present(context, name):
     assert name in context.response.headers
+
+
+@then('the response header "{name}" should contain "{text}"')
+def header_contains(context, name, text):
+    assert text in context.response.headers[name]
 
 
 @then('the response header "{name}" should be an int32 integer')
@@ -379,6 +435,12 @@ def header_datetime(context, name):
 @then('a subsequent GET request to "{path}" should return status code {status:d}')
 def subsequent_status(context, path, status):
     _send(context, "GET", path)
+    response_status(context, status)
+
+
+@then('a subsequent DELETE request to "{path}" should return status code {status:d}')
+def subsequent_delete_status(context, path, status):
+    _send(context, "DELETE", path)
     response_status(context, status)
 
 

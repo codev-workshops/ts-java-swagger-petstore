@@ -124,6 +124,104 @@ Feature: Pet resource
     When I send a POST request to "/pet"
     Then the response status code should be 401
 
+  @contract
+  Scenario: addPet - accepts an XML request body
+    Given the request header "Content-Type" is "application/xml"
+    And the request body is:
+      """
+      <Pet><id>20</id><name>xml-doggie</name><photoUrls><photoUrl>https://example.com/20.jpg</photoUrl></photoUrls><status>available</status></Pet>
+      """
+    When I send a POST request to "/pet"
+    Then the response status code should be 200
+    And the response body should match the "Pet" schema
+    And the response field "name" should be "xml-doggie"
+
+  @contract
+  Scenario: addPet - accepts a form-encoded request body
+    Given the request header "Content-Type" is "application/x-www-form-urlencoded"
+    And the request body is:
+      """
+      id=21&name=form-doggie&photoUrls=https%3A%2F%2Fexample.com%2F21.jpg&status=pending
+      """
+    When I send a POST request to "/pet"
+    Then the response status code should be 200
+    And the response field "name" should be "form-doggie"
+
+  @boundary
+  Scenario: addPet - accepts a minimal payload
+    Given the request header "Content-Type" is "application/json"
+    And the request body is:
+      """
+      { "name": "minimal-doggie", "photoUrls": [ "https://example.com/minimal.jpg" ] }
+      """
+    When I send a POST request to "/pet"
+    Then the response status code should be 200
+    And the response body should match the "Pet" schema
+    And the response body should contain the required fields:
+      | field |
+      | name  |
+
+  @boundary
+  Scenario: addPet - accepts empty photoUrls and tags arrays
+    Given the request header "Content-Type" is "application/json"
+    And the request body is:
+      """
+      { "name": "empty-arrays", "photoUrls": [], "tags": [] }
+      """
+    When I send a POST request to "/pet"
+    Then the response status code should be 200
+    And the response field "photoUrls" should have 0 items
+
+  @boundary
+  Scenario Outline: addPet - accepts int64 id edges
+    Given the request header "Content-Type" is "application/json"
+    And the request body is:
+      """
+      { "id": <id>, "name": "edge-pet-<id>", "photoUrls": [ "https://example.com/<id>.jpg" ] }
+      """
+    When I send a POST request to "/pet"
+    Then the response status code should be 200
+    And the response field "id" should be <id>
+
+    Examples:
+      | id                  |
+      | 0                   |
+      | 1                   |
+      | 9223372036854775807 |
+
+  @boundary @negative
+  Scenario: addPet - rejects an id beyond int64
+    Given the request header "Content-Type" is "application/json"
+    And the request body is:
+      """
+      { "id": 9223372036854775808, "name": "overflow", "photoUrls": [ "https://example.com/overflow.jpg" ] }
+      """
+    When I send a POST request to "/pet"
+    Then the response status code should be 400
+
+  @boundary
+  Scenario: addPet - accepts a 255-character name
+    Given the request header "Content-Type" is "application/json"
+    And the request body is:
+      """
+      { "name": "placeholder", "photoUrls": [ "https://example.com/length.jpg" ] }
+      """
+    And the request body field "name" is a string of 255 characters
+    When I send a POST request to "/pet"
+    Then the response status code should be 200
+    And the response field "name" should have length 255
+
+  @boundary
+  Scenario: addPet - echoes a unicode name
+    Given the request header "Content-Type" is "application/json"
+    And the request body is:
+      """
+      { "name": "Fluffy 🐶 Müller", "photoUrls": [ "https://example.com/unicode.jpg" ] }
+      """
+    When I send a POST request to "/pet"
+    Then the response status code should be 200
+    And the response field "name" should be "Fluffy 🐶 Müller"
+
   # ---------------------------------------------------------------------------
   # updatePet - PUT /pet
   # ---------------------------------------------------------------------------
@@ -208,6 +306,51 @@ Feature: Pet resource
     When I send a PUT request to "/pet"
     Then the response status code should be 401
 
+  @contract
+  Scenario: updatePet - accepts an XML request body
+    Given a pet with id 10 exists
+    And the request header "Content-Type" is "application/xml"
+    And the request body is:
+      """
+      <Pet><id>10</id><name>xml-renamed</name><photoUrls><photoUrl>https://example.com/10.xml.jpg</photoUrl></photoUrls><status>available</status></Pet>
+      """
+    When I send a PUT request to "/pet"
+    Then the response status code should be 200
+    And the response field "name" should be "xml-renamed"
+
+  @contract
+  Scenario: updatePet - accepts a form-encoded request body
+    Given a pet with id 10 exists
+    And the request header "Content-Type" is "application/x-www-form-urlencoded"
+    And the request body is:
+      """
+      id=10&name=form-renamed&photoUrls=https%3A%2F%2Fexample.com%2F10-form.jpg&status=pending
+      """
+    When I send a PUT request to "/pet"
+    Then the response status code should be 200
+    And the response field "name" should be "form-renamed"
+
+  @boundary @negative
+  Scenario: updatePet - id zero is not found
+    Given no pet with id 0 exists
+    And the request header "Content-Type" is "application/json"
+    And the request body is:
+      """
+      { "id": 0, "name": "missing", "photoUrls": [ "https://example.com/missing.jpg" ] }
+      """
+    When I send a PUT request to "/pet"
+    Then the response status code should be 404
+
+  @boundary @negative
+  Scenario: updatePet - rejects an id beyond int64
+    Given the request header "Content-Type" is "application/json"
+    And the request body is:
+      """
+      { "id": 9223372036854775808, "name": "overflow", "photoUrls": [ "https://example.com/overflow.jpg" ] }
+      """
+    When I send a PUT request to "/pet"
+    Then the response status code should be 400
+
   # ---------------------------------------------------------------------------
   # findPetsByStatus - GET /pet/findByStatus
   # ---------------------------------------------------------------------------
@@ -248,6 +391,12 @@ Feature: Pet resource
     When I send a GET request to "/pet/findByStatus?status=available"
     Then the response status code should be 401
 
+  @boundary
+  Scenario: findPetsByStatus - repeated status values return an array
+    When I send a GET request to "/pet/findByStatus?status=sold&status=sold"
+    Then the response status code should be 200
+    And the response body should be a JSON array
+
   # ---------------------------------------------------------------------------
   # findPetsByTags - GET /pet/findByTags
   # ---------------------------------------------------------------------------
@@ -280,6 +429,18 @@ Feature: Pet resource
     Given I do not send any Authorization header
     When I send a GET request to "/pet/findByTags?tags=tag1"
     Then the response status code should be 401
+
+  @boundary
+  Scenario: findPetsByTags - unknown tag returns an empty array
+    When I send a GET request to "/pet/findByTags?tags=no-such-tag-xyz"
+    Then the response status code should be 200
+    And the response body should be an empty JSON array
+
+  @boundary
+  Scenario: findPetsByTags - accepts ten repeated tags
+    When I send a GET request to "/pet/findByTags?tags=t1&tags=t2&tags=t3&tags=t4&tags=t5&tags=t6&tags=t7&tags=t8&tags=t9&tags=t10"
+    Then the response status code should be 200
+    And the response body should be a JSON array
 
   # ---------------------------------------------------------------------------
   # getPetById - GET /pet/{petId}
@@ -330,6 +491,23 @@ Feature: Pet resource
     When I send a GET request to "/pet/10"
     Then the response status code should be 401
 
+  @boundary
+  Scenario Outline: getPetById - well-formed int64 ids with no pet return 404
+    Given no pet with id <petId> exists
+    When I send a GET request to "/pet/<petId>"
+    Then the response status code should be 404
+
+    Examples:
+      | petId               |
+      | 0                   |
+      | -1                  |
+      | 9223372036854775807 |
+
+  @boundary @negative
+  Scenario: getPetById - rejects an id beyond int64
+    When I send a GET request to "/pet/9223372036854775808"
+    Then the response status code should be 400
+
   # ---------------------------------------------------------------------------
   # updatePetWithForm - POST /pet/{petId}
   # ---------------------------------------------------------------------------
@@ -371,6 +549,32 @@ Feature: Pet resource
     When I send a POST request to "/pet/10?name=rex"
     Then the response status code should be 401
 
+  @negative
+  Scenario: updatePetWithForm - pet not found
+    When I send a POST request to "/pet/999999999?name=ghost"
+    Then the response status code should be 404
+
+  @boundary
+  Scenario: updatePetWithForm - empty name is accepted
+    Given a pet with id 10 exists
+    When I send a POST request to "/pet/10?name="
+    Then the response status code should be 200
+    And the response field "name" should be ""
+
+  @boundary
+  Scenario: updatePetWithForm - accepts a 255-character name
+    Given a pet with id 10 exists
+    When I send a POST request to "/pet/10?name=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
+    Then the response status code should be 200
+    And the response field "name" should have length 255
+
+  @boundary
+  Scenario: updatePetWithForm - accepts a unicode name
+    Given a pet with id 10 exists
+    When I send a POST request to "/pet/10?name=R%C3%A9x"
+    Then the response status code should be 200
+    And the response field "name" should be "Réx"
+
   # ---------------------------------------------------------------------------
   # deletePet - DELETE /pet/{petId}
   # ---------------------------------------------------------------------------
@@ -402,6 +606,22 @@ Feature: Pet resource
     Given I do not send any Authorization header
     When I send a DELETE request to "/pet/10"
     Then the response status code should be 401
+
+  @boundary
+  Scenario: deletePet - deleting an unknown id is idempotent
+    Given no pet with id 999999998 exists
+    When I send a DELETE request to "/pet/999999998"
+    Then the response status code should be 200
+
+  @boundary @negative
+  Scenario: deletePet - rejects an id beyond int64
+    When I send a DELETE request to "/pet/9223372036854775808"
+    Then the response status code should be 400
+
+  @boundary
+  Scenario: deletePet - accepts the maximum int64 id
+    When I send a DELETE request to "/pet/9223372036854775807"
+    Then the response status code should be 200
 
   # ---------------------------------------------------------------------------
   # uploadFile - POST /pet/{petId}/uploadImage
@@ -450,3 +670,34 @@ Feature: Pet resource
     And the request body is the binary contents of file "fixtures/doggie.jpg"
     When I send a POST request to "/pet/10/uploadImage"
     Then the response status code should be 401
+
+  @boundary @negative
+  Scenario: uploadFile - rejects a pet id beyond int64
+    Given the request header "Content-Type" is "application/octet-stream"
+    And the request body is the binary contents of file "fixtures/doggie.jpg"
+    When I send a POST request to "/pet/9223372036854775808/uploadImage"
+    Then the response status code should be 400
+
+  @boundary
+  Scenario: uploadFile - accepts a one-byte body
+    Given a pet with id 10 exists
+    And the request header "Content-Type" is "application/octet-stream"
+    And the request body is 1 random bytes
+    When I send a POST request to "/pet/10/uploadImage"
+    Then the response status code should be 200
+    And the response body should match the "ApiResponse" schema
+  @boundary
+  Scenario: uploadFile - accepts empty additionalMetadata
+    Given a pet with id 10 exists
+    And the request header "Content-Type" is "application/octet-stream"
+    And the request body is the binary contents of file "fixtures/doggie.jpg"
+    When I send a POST request to "/pet/10/uploadImage?additionalMetadata="
+    Then the response status code should be 200
+    And the response body should match the "ApiResponse" schema
+
+  @boundary
+  Scenario: uploadFile - accepts 500-character additionalMetadata
+    Given a pet with id 10 exists
+    And the request header "Content-Type" is "application/octet-stream"
+    And the request body is the binary contents of file "fixtures/doggie.jpg"
+    When I send a POST request to "/pet/10/uploadImage?additionalMetadata=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa external?

@@ -21,8 +21,11 @@ Base server URL: `https://petstore3.swagger.io/api/v3` (set in each `Background`
 - Tags, so runs can be filtered:
   - `@auth` – scenarios exercising `petstore_auth` (OAuth2) or `api_key` security.
   - `@negative` – scenarios expecting an error status (400/401/404/422).
-  - `@boundary` – scenarios around the ID limits described in the spec
+  - `@boundary` – scenarios around int32/int64 limits, empty or minimal bodies,
+    string length and unicode, as well as the ID limits described in the spec
     (`getOrderById`: ids `<= 5` or `> 10` are valid; `deleteOrder`: ids `< 1000` are valid).
+  - `@contract` – scenarios exercising alternative declared request content
+    types: `application/xml`, `application/x-www-form-urlencoded`.
 
 ## Running against a live Petstore
 
