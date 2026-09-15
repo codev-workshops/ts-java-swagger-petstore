@@ -83,7 +83,7 @@ which:
 3. fails (exit 1) and lists the endpoints that no scenario exercises.
 
 When a gap is found the workflow posts/updates a PR comment with the uncovered
-endpoints and starts a Devin session (`POST /v1/sessions` on the Devin API) that
+endpoints and starts a Devin session (`POST /v3/organizations/{org_id}/sessions` on the Devin API) that
 is asked to add the missing scenarios to `features/`, reusing the step
 vocabulary and the `@auth` / `@negative` / `@boundary` tags described above, and
 to open a PR against the branch under review.
@@ -116,10 +116,11 @@ Steps written in any other form are **not** counted as coverage.
 
 | Name | Type | Purpose |
 | --- | --- | --- |
-| `DEVIN_API_KEY` | repository secret (required) | Bearer token used to create the Devin session. |
+| `DEVIN_API_KEY` | repository secret (required) | Devin API service-user key (`cog_...`) for the target organization, used as the bearer token. |
+| `DEVIN_ORG_ID` | repository variable (required) | Devin organization to create sessions in (`org-...`); pins the org explicitly instead of inferring it from the key. |
 | `DEVIN_API_BASE_URL` | repository variable (optional) | Devin API base URL; defaults to `https://api.devin.ai`. For this org's enterprise instance set it to `https://codev.devinenterprise.com/api`. |
 
-Without `DEVIN_API_KEY` the coverage report and PR comment still run, but the
+Without `DEVIN_API_KEY`/`DEVIN_ORG_ID` the coverage report and PR comment still run, but the
 "Start Devin session" step fails.
 
 Note: the spec does not declare a `401` response explicitly (auth failures fall

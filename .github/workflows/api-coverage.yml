@@ -61,6 +61,7 @@ jobs:
         env:
           DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
           DEVIN_API_BASE_URL: ${{ vars.DEVIN_API_BASE_URL || 'https://api.devin.ai' }}
+          DEVIN_ORG_ID: ${{ vars.DEVIN_ORG_ID }}
           UNCOVERED: ${{ steps.coverage.outputs.uncovered }}
           REPO: ${{ github.repository }}
           PR_NUMBER: ${{ github.event.pull_request.number }}
@@ -70,6 +71,10 @@ jobs:
         run: |
           if [ -z "$DEVIN_API_KEY" ]; then
             echo "::error::DEVIN_API_KEY secret is not set; cannot start a Devin session."
+            exit 1
+          fi
+          if [ -z "$DEVIN_ORG_ID" ]; then
+            echo "::error::DEVIN_ORG_ID repository variable is not set (expected an 'org-...' id); cannot start a Devin session."
             exit 1
           fi
           python - <<'EOF'
@@ -100,10 +105,10 @@ jobs:
               "prompt": prompt,
               "title": f"Fill Gherkin coverage gap for {repo} PR #{os.environ['PR_NUMBER']}",
               "tags": ["api-coverage", f"pr-{os.environ['PR_NUMBER']}"],
-              "idempotent": True,
+              "repos": [f"github.com/{repo}"],
           }
           req = urllib.request.Request(
-              os.environ["DEVIN_API_BASE_URL"].rstrip("/") + "/v1/sessions",
+              f"{os.environ['DEVIN_API_BASE_URL'].rstrip('/')}/v3/organizations/{os.environ['DEVIN_ORG_ID']}/sessions",
               data=json.dumps(payload).encode(),
               headers={
                   "Authorization": f"Bearer {os.environ['DEVIN_API_KEY']}",
