@@ -351,6 +351,22 @@ paths:
         - petstore_auth:
             - write:pets
             - read:pets
+  /pet/{petId}/photos:
+    get:
+      tags:
+        - pet
+      summary: List photos of a pet (TEMP coverage-check test).
+      operationId: listPetPhotos
+      parameters:
+        - name: petId
+          in: path
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
   /store/inventory:
     get:
       tags:
