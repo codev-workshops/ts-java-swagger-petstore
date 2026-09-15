@@ -6,7 +6,7 @@ covered, grouped one file per tag:
 
 | File | Tag | Operations |
 | --- | --- | --- |
-| `pet.feature` | `pet` | `updatePet`, `addPet`, `findPetsByStatus`, `findPetsByTags`, `getPetById`, `updatePetWithForm`, `deletePet`, `uploadFile` |
+| `pet.feature` | `pet` | `updatePet`, `addPet`, `findPetsByStatus`, `findPetsByTags`, `getPetById`, `listPetPhotos`, `updatePetWithForm`, `deletePet`, `uploadFile` |
 | `store.feature` | `store` | `getInventory`, `placeOrder`, `getOrderById`, `deleteOrder` |
 | `user.feature` | `user` | `createUser`, `createUsersWithListInput`, `loginUser`, `logoutUser`, `getUserByName`, `updateUser`, `deleteUser` |
 

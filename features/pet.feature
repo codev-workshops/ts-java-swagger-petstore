@@ -2,7 +2,7 @@ Feature: Pet resource
   Everything about your Pets.
   Operations under the "pet" tag of src/main/resources/openapi.yaml:
   updatePet, addPet, findPetsByStatus, findPetsByTags, getPetById,
-  updatePetWithForm, deletePet, uploadFile.
+  listPetPhotos, updatePetWithForm, deletePet, uploadFile.
 
   Background:
     Given the API base URL is "https://petstore3.swagger.io/api/v3"
@@ -329,6 +329,28 @@ Feature: Pet resource
     And I do not send an "api_key" header
     When I send a GET request to "/pet/10"
     Then the response status code should be 401
+
+  # ---------------------------------------------------------------------------
+  # listPetPhotos - GET /pet/{petId}/photos
+  # No security declared; the spec documents only a 200 response.
+  # ---------------------------------------------------------------------------
+
+  Scenario: listPetPhotos - valid id returns the pet's photos
+    Given a pet with id 10 exists
+    And I do not send any Authorization header
+    When I send a GET request to "/pet/10/photos"
+    Then the response status code should be 200
+
+  @negative
+  Scenario Outline: listPetPhotos - invalid id format is rejected
+    When I send a GET request to "/pet/<petId>/photos"
+    Then the response status code should be 400
+
+    Examples:
+      | petId |
+      | abc   |
+      | 1.5   |
+      | -1x   |
 
   # ---------------------------------------------------------------------------
   # updatePetWithForm - POST /pet/{petId}
