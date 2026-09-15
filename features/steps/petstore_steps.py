@@ -16,6 +16,14 @@ use_step_matcher("parse")
 from behave import register_type
 
 register_type(Boolean=TypeBuilder.make_enum({"true": True, "false": False}))
+
+
+def _string_or_empty(text):
+    return text
+
+
+_string_or_empty.pattern = r".*?"
+register_type(String=_string_or_empty)
 ROOT = Path(__file__).resolve().parents[2]
 SPEC = yaml.safe_load((ROOT / "src/main/resources/openapi.yaml").read_text())
 SCHEMAS = SPEC["components"]["schemas"]
@@ -301,7 +309,7 @@ def typed_fields(context):
         ), f"{row['field']} is not a {expected}"
 
 
-@then('the response field "{name}" should be "{expected}"')
+@then('the response field "{name}" should be "{expected:String}"')
 def string_field(context, name, expected):
     assert _field(_json(context), name) == expected
 
