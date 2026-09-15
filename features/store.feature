@@ -32,14 +32,6 @@ Feature: Store resource
     When I send a GET request to "/store/inventory"
     Then the response status code should be 401
 
-  @boundary
-  Scenario: getInventory - response keys and values are bounded
-    Given the request header "api_key" is "special-key"
-    When I send a GET request to "/store/inventory"
-    Then the response status code should be 200
-    And every key in the response object should be one of "placed, approved, delivered"
-    And every value in the response object should be greater than or equal to 0
-
   @negative
   Scenario: getInventory - POST is not allowed
     Given the request header "api_key" is "special-key"

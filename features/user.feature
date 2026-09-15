@@ -48,7 +48,7 @@ Feature: User resource
     Given the request header "Content-Type" is "application/json"
     And the request body is:
       """
-      { "username": "theUser", "firstName":
+      { "username": "theUser", "firstName": 
       """
     When I send a POST request to "/user"
     Then the response status code should be 400
@@ -274,7 +274,7 @@ Feature: User resource
     Given a user exists with credentials:
       | username | password |
       | user1    | abc123   |
-    When I send a GET request to "/user/login?username=user1&password=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabc123"
+    When I send a GET request to "/user/login?username=user1&password=abc123"
     Then the response status code should be 200
     And the response body should be a string
     And the response header "X-Rate-Limit" should be present
@@ -299,14 +299,17 @@ Feature: User resource
     When I send a GET request to "/user/login"
     Then the response status code should be 400
 
-  @boundary
+  @boundary @negative
   Scenario: loginUser - rejects a 255-character password
     When I send a GET request to "/user/login?username=user1&password=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"
     Then the response status code should be 400
 
   @boundary
   Scenario: loginUser - response contains the session message
-    When I send a GET request to "/user/login?username=user1&password=aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaabc123"
+    Given a user exists with credentials:
+      | username | password |
+      | user1    | abc123   |
+    When I send a GET request to "/user/login?username=user1&password=abc123"
     Then the response status code should be 200
     And the response body should contain "Logged in user session"
 
@@ -431,7 +434,7 @@ Feature: User resource
     And the request header "Content-Type" is "application/json"
     And the request body is:
       """
-      { "username": "user1", "firstName":
+      { "username": "user1", "firstName": 
       """
     When I send a PUT request to "/user/user1"
     Then the response status code should be 400

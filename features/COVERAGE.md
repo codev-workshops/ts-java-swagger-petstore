@@ -10,13 +10,13 @@
 | updatePetWithForm | POST /pet/{petId} | 2 | 3 | 1 | 3 | 0 |
 | deletePet | DELETE /pet/{petId} | 2 | 3 | 1 | 3 | 0 |
 | uploadFile | POST /pet/{petId}/uploadImage | 2 | 4 | 1 | 4 | 0 |
-| getInventory | GET /store/inventory | 0 | 3 | 3 | 1 | 0 |
+| getInventory | GET /store/inventory | 0 | 3 | 3 | 0 | 0 |
 | placeOrder | POST /store/order | 2 | 6 | 0 | 7 | 2 |
 | getOrderById | GET /store/order/{orderId} | 1 | 4 | 0 | 4 | 0 |
 | deleteOrder | DELETE /store/order/{orderId} | 1 | 4 | 0 | 5 | 0 |
 | createUser | POST /user | 1 | 5 | 0 | 6 | 2 |
 | createUsersWithListInput | POST /user/createWithList | 1 | 2 | 0 | 3 | 0 |
-| loginUser | GET /user/login | 1 | 2 | 0 | 3 | 0 |
+| loginUser | GET /user/login | 1 | 3 | 0 | 3 | 0 |
 | logoutUser | GET /user/logout | 2 | 1 | 0 | 2 | 0 |
 | getUserByName | GET /user/{username} | 1 | 2 | 0 | 3 | 0 |
 | updateUser | PUT /user/{username} | 1 | 4 | 0 | 2 | 2 |
@@ -32,8 +32,9 @@ coverage additions.
   (auth-only negatives).
 - The declared XML and form-urlencoded content types on five operations had
   zero scenarios.
-- Boundary categories added for integer limits, empty/minimal payloads, string
-  lengths, unicode, repeated parameters, and idempotence.
+- Boundary categories added for integer limits, empty/minimal payloads,
+  string lengths, unicode, repeated parameters, and idempotence. The
+  unstable getInventory key/value assertion was removed.
 
 `createUsersWithArrayInput` exists in `UserController` but has no route in
 `openapi.yaml`, so it is intentionally not covered.

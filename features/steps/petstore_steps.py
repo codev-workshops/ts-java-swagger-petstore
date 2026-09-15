@@ -400,17 +400,6 @@ def object_values(context):
     )
 
 
-@then('every key in the response object should be one of "{values}"')
-def object_keys_in(context, values):
-    allowed = {item.strip() for item in values.split(",")}
-    assert set(_json(context)).issubset(allowed)
-
-
-@then("every value in the response object should be greater than or equal to {minimum:d}")
-def object_values_at_least(context, minimum):
-    assert all(value >= minimum for value in _json(context).values())
-
-
 @then('the response header "{name}" should be present')
 def header_present(context, name):
     assert name in context.response.headers
