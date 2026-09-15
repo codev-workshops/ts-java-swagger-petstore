@@ -117,7 +117,7 @@ Steps written in any other form are **not** counted as coverage.
 | Name | Type | Purpose |
 | --- | --- | --- |
 | `DEVIN_API_KEY` | repository secret (required) | Bearer token used to create the Devin session. |
-| `DEVIN_API_BASE_URL` | repository variable (optional) | Devin API base URL; defaults to `https://api.devin.ai`. |
+| `DEVIN_API_BASE_URL` | repository variable (optional) | Devin API base URL; defaults to `https://api.devin.ai`. For this org's enterprise instance set it to `https://codev.devinenterprise.com/api`. |
 
 Without `DEVIN_API_KEY` the coverage report and PR comment still run, but the
 "Start Devin session" step fails.
