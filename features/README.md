@@ -24,17 +24,51 @@ Base server URL: `https://petstore3.swagger.io/api/v3` (set in each `Background`
   - `@boundary` – scenarios around the ID limits described in the spec
     (`getOrderById`: ids `<= 5` or `> 10` are valid; `deleteOrder`: ids `< 1000` are valid).
 
-## Scope
+## Running against a live Petstore
 
-These are functional tests only: they assert on status codes, response
-schema/shape, enum values, required fields and auth outcomes. They contain no
-performance or response-time assertions.
+Install the Python test dependencies from the repository root:
 
-Step definitions are not included; the steps use a small, consistent vocabulary
-(`the request header ... is ...`, `the request body is:`, `I send a <METHOD>
-request to ...`, `the response status code should be ...`, `the response body
-should match the "<Schema>" schema`, ...) so they can be bound in Cucumber-JVM,
-Behave, or any other Gherkin runner.
+```console
+pip install -r features/requirements.txt
+```
+
+Run every feature against the public demo server:
+
+```console
+behave features/
+```
+
+Tags can be used to focus a run or omit expected-error cases:
+
+```console
+behave --tags=@auth
+behave --tags=~@negative
+```
+
+The runner supports these environment variables:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PETSTORE_BASE_URL` | URL in each `Background` | Override the API base URL |
+| `PETSTORE_OAUTH_TOKEN` | `behave-placeholder-token` | Bearer token for `petstore_auth` steps |
+| `PETSTORE_API_KEY` | `special-key` | Value sent by `api_key` steps |
+
+To run against a local server, start it in another terminal:
+
+```console
+mvn package jetty:run
+```
+
+Jetty listens on port `8080`; point Behave at the local API prefix:
+
+```console
+PETSTORE_BASE_URL=http://localhost:8080/api/v3 behave features/
+```
+
+The public demo server is permissive and may not enforce every declared
+security or validation rule. Consequently, some `@negative` and `@auth`
+scenarios are expected to fail there; use a local server when checking the
+full contract.
 
 Note: the spec does not declare a `401` response explicitly (auth failures fall
 under `default: Unexpected error`); the `@auth @negative` scenarios assert `401`
