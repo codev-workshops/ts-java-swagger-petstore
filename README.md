@@ -40,5 +40,13 @@ docker run  --name swaggerapi-petstore3 -d -p 8080:8080 swaggerapi/petstore3:uns
 Once started, you can navigate to http://localhost:8080/api/v3/openapi.json to view the Swagger Resource Listing.
 This tells you that the server is up and ready to demonstrate Swagger.
 
+### API endpoint coverage check (CI)
+Every pull request runs `.github/workflows/api-coverage.yml`, which executes
+`scripts/check_endpoint_coverage.py` to verify that every operation in
+`src/main/resources/openapi.yaml` is exercised by a Gherkin scenario in `features/`.
+When an endpoint is uncovered the job fails, comments the gap on the PR, and starts a
+Devin session (via the `DEVIN_API_KEY` repository secret) to generate the missing
+scenarios. See [`features/README.md`](features/README.md#pr-coverage-check) for details.
+
 ### Using the UI
 There is an HTML5-based API tool bundled in this sample--you can view it it at [http://localhost:8080](http://localhost:8080). This lets you inspect the API using an interactive UI.  You can access the source of this code from [here](https://github.com/swagger-api/swagger-ui)

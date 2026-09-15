@@ -1,0 +1,129 @@
+name: API endpoint coverage
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  coverage:
+    name: openapi.yaml vs features/*.feature
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - run: pip install pyyaml
+
+      - name: Check endpoint coverage
+        id: coverage
+        continue-on-error: true
+        run: python scripts/check_endpoint_coverage.py
+
+      - name: Comment uncovered endpoints on the PR
+        if: steps.coverage.outcome == 'failure' && steps.coverage.outputs.uncovered_count > 0
+        uses: actions/github-script@v7
+        env:
+          UNCOVERED: ${{ steps.coverage.outputs.uncovered }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        with:
+          script: |
+            const marker = '<!-- api-endpoint-coverage -->';
+            const list = process.env.UNCOVERED.trim().split('\n').map(l => `- \`${l}\``).join('\n');
+            const body = [
+              marker,
+              '### API endpoint coverage gap',
+              '',
+              'The following `src/main/resources/openapi.yaml` endpoints have no `When I send a <METHOD> request to "..."` step in `features/*.feature`:',
+              '',
+              list,
+              '',
+              `A Devin session is being started to generate the missing scenarios. [Workflow run](${process.env.RUN_URL})`,
+            ].join('\n');
+            const { owner, repo } = context.repo;
+            const issue_number = context.issue.number;
+            const { data: comments } = await github.rest.issues.listComments({ owner, repo, issue_number, per_page: 100 });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ owner, repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ owner, repo, issue_number, body });
+            }
+
+      - name: Start Devin session to fill the coverage gap
+        if: steps.coverage.outcome == 'failure' && steps.coverage.outputs.uncovered_count > 0
+        env:
+          DEVIN_API_KEY: ${{ secrets.DEVIN_API_KEY }}
+          DEVIN_API_BASE_URL: ${{ vars.DEVIN_API_BASE_URL || 'https://api.devin.ai' }}
+          UNCOVERED: ${{ steps.coverage.outputs.uncovered }}
+          REPO: ${{ github.repository }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          PR_URL: ${{ github.event.pull_request.html_url }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          if [ -z "$DEVIN_API_KEY" ]; then
+            echo "::error::DEVIN_API_KEY secret is not set; cannot start a Devin session."
+            exit 1
+          fi
+          python - <<'EOF'
+          import json, os, sys, urllib.request
+
+          uncovered = [l for l in os.environ["UNCOVERED"].splitlines() if l.strip()]
+          repo = os.environ["REPO"]
+          prompt = f"""Repository: {repo}
+          PR: {os.environ['PR_URL']} (branch `{os.environ['HEAD_REF']}`, commit {os.environ['HEAD_SHA']})
+
+          The API endpoint coverage check found openapi.yaml endpoints with no Gherkin scenario in `features/`.
+          Uncovered (METHOD PATH) endpoints:
+          """ + "\n".join(f"- {e}" for e in uncovered) + f"""
+
+          Task:
+          1. Check out branch `{os.environ['HEAD_REF']}` of {repo}.
+          2. Read `src/main/resources/openapi.yaml` for each uncovered endpoint (parameters, request body, responses, security).
+          3. Read `features/README.md` and the existing `features/*.feature` files, then add scenarios for every uncovered endpoint to the feature file matching the endpoint's OpenAPI tag (`pet.feature`, `store.feature`, `user.feature`; create `<tag>.feature` if the tag is new).
+          4. Reuse the existing step vocabulary exactly, in particular every scenario must call its endpoint with a step of the form `When I send a <METHOD> request to "<path>"` using concrete path values (e.g. `/pet/10`) so `scripts/check_endpoint_coverage.py` detects it.
+          5. Apply the tagging conventions from `features/README.md`: `@auth` for scenarios exercising `petstore_auth`/`api_key`, `@negative` for error-status scenarios, `@boundary` for ID-limit scenarios. Cover the success path plus documented error responses. Functional assertions only (status code, schema, enum/required fields, auth).
+          6. Update the operations table in `features/README.md` if new operations were added.
+          7. Run `python scripts/check_endpoint_coverage.py` and make sure it exits 0.
+          8. Open a pull request targeting branch `{os.environ['HEAD_REF']}` with the new scenarios and link PR #{os.environ['PR_NUMBER']} in the description.
+          """
+          prompt = "\n".join(line.strip() for line in prompt.splitlines())
+
+          payload = {
+              "prompt": prompt,
+              "title": f"Fill Gherkin coverage gap for {repo} PR #{os.environ['PR_NUMBER']}",
+              "tags": ["api-coverage", f"pr-{os.environ['PR_NUMBER']}"],
+              "idempotent": True,
+          }
+          req = urllib.request.Request(
+              os.environ["DEVIN_API_BASE_URL"].rstrip("/") + "/v1/sessions",
+              data=json.dumps(payload).encode(),
+              headers={
+                  "Authorization": f"Bearer {os.environ['DEVIN_API_KEY']}",
+                  "Content-Type": "application/json",
+              },
+              method="POST",
+          )
+          try:
+              with urllib.request.urlopen(req, timeout=60) as resp:
+                  body = json.load(resp)
+          except urllib.error.HTTPError as exc:
+              print(f"::error::Devin API returned {exc.code}: {exc.read().decode(errors='replace')}")
+              sys.exit(1)
+          print(f"Started Devin session {body.get('session_id')}: {body.get('url')}")
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as fh:
+              fh.write(f"Devin session started to fill coverage gap: {body.get('url')}\n")
+          EOF
+
+      - name: Fail when endpoints are uncovered
+        if: steps.coverage.outcome == 'failure'
+        run: |
+          echo "::error::${{ steps.coverage.outputs.uncovered_count }} openapi.yaml endpoint(s) lack Gherkin coverage in features/. See the coverage step output."
+          exit 1

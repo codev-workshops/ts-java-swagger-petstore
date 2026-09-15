@@ -70,6 +70,58 @@ security or validation rule. Consequently, some `@negative` and `@auth`
 scenarios are expected to fail there; use a local server when checking the
 full contract.
 
+## PR coverage check
+
+`.github/workflows/api-coverage.yml` runs on every pull request (`opened`,
+`synchronize`, `reopened`) and executes `scripts/check_endpoint_coverage.py`,
+which:
+
+1. enumerates every `(METHOD, PATH)` operation under `paths:` in
+   `src/main/resources/openapi.yaml`;
+2. scans `features/*.feature` for request steps and maps each one back to a
+   spec operation;
+3. fails (exit 1) and lists the endpoints that no scenario exercises.
+
+When a gap is found the workflow posts/updates a PR comment with the uncovered
+endpoints and starts a Devin session (`POST /v1/sessions` on the Devin API) that
+is asked to add the missing scenarios to `features/`, reusing the step
+vocabulary and the `@auth` / `@negative` / `@boundary` tags described above, and
+to open a PR against the branch under review.
+
+Run the check locally with `python scripts/check_endpoint_coverage.py`
+(requires `pyyaml`).
+
+### The request-step convention the analyzer relies on
+
+Every scenario **must** call its endpoint with a step of exactly this shape:
+
+```gherkin
+When I send a <METHOD> request to "<path>"
+```
+
+for example `When I send a POST request to "/pet"` or
+`When I send a GET request to "/pet/10"`. The analyzer:
+
+- strips query strings (`/pet/findByStatus?status=available` -> `/pet/findByStatus`);
+- matches concrete or `Scenario Outline` placeholder segments (`/pet/10`,
+  `/pet/<petId>`) against templated spec segments (`/pet/{petId}`), preferring a
+  literal spec path when one exists (`/pet/findByStatus` is not treated as
+  `/pet/{petId}`);
+- ignores any request step whose method/path does not resolve to a spec
+  operation (these are listed separately in the report).
+
+Steps written in any other form are **not** counted as coverage.
+
+### Required secret and variables
+
+| Name | Type | Purpose |
+| --- | --- | --- |
+| `DEVIN_API_KEY` | repository secret (required) | Bearer token used to create the Devin session. |
+| `DEVIN_API_BASE_URL` | repository variable (optional) | Devin API base URL; defaults to `https://api.devin.ai`. |
+
+Without `DEVIN_API_KEY` the coverage report and PR comment still run, but the
+"Start Devin session" step fails.
+
 Note: the spec does not declare a `401` response explicitly (auth failures fall
 under `default: Unexpected error`); the `@auth @negative` scenarios assert `401`
 as the conventional outcome for a missing or invalid credential.
