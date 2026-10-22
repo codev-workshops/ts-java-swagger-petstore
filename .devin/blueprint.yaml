@@ -1,0 +1,45 @@
+# https://docs.devin.ai/onboard-devin/environment-yaml
+# Swagger/OpenAPI 3.0 Pet Store server: Java 8, Swagger Inflector, JAX-RS, Jetty, Maven.
+# Commands run from the repo root.
+# One-time setup (e.g., install system tools, global CLIs).
+initialize: |
+  sudo apt-get update && sudo apt-get install -y openjdk-8-jdk maven
+# Install project dependencies (runs during builds, surfaced to agent at session start).
+maintenance: |
+  export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64
+  export PATH=$JAVA_HOME/bin:$PATH
+  # Maven Central returns HTTP 429 when many snapshot builds resolve deps concurrently.
+  MVN_RETRY_OPTS="-Dmaven.wagon.http.retryHandler.count=5 -Dmaven.wagon.http.retryHandler.requestSentEnabled=true -Dmaven.wagon.httpconnectionManager.ttlSeconds=120 -Dmaven.wagon.rto=60000 -Daether.connector.resumeDownloads=true"
+  delay=15
+  for attempt in 1 2 3 4 5; do
+    if mvn -q clean package -DskipTests $MVN_RETRY_OPTS; then
+      echo "build OK (attempt $attempt)"
+      break
+    fi
+    if [ "$attempt" = "5" ]; then
+      echo "ERROR: build failed after 5 attempts" >&2
+      exit 1
+    fi
+    echo "build attempt $attempt failed (likely Maven Central 429); retrying in ${delay}s" >&2
+    sleep "$delay"
+    delay=$((delay * 2))
+  done
+knowledge:
+  - name: java-version
+    contents: |
+      Use JDK 8 for build/run: export JAVA_HOME=/usr/lib/jvm/java-8-openjdk-amd64.
+      JDK 17 breaks maven-war-plugin (XStream "Cannot access defaults field of Properties").
+  - name: run
+    contents: |
+      Run the server on port 8080 (matches Dockerfile CMD):
+      java -jar -DswaggerUrl=src/main/resources/openapi.yaml \
+        target/lib/jetty-runner.jar target/swagger-petstore-1.0.27.war
+      Alternatively: mvn package jetty:run
+  - name: verify
+    contents: |
+      curl http://localhost:8080/api/v3/openapi.json   # 200, OpenAPI spec
+      curl http://localhost:8080/api/v3/store/inventory # 200, JSON inventory
+      Swagger UI: http://localhost:8080/
+  - name: build
+    contents: |
+      mvn -q clean package -DskipTests  (produces target/swagger-petstore-1.0.27.war)
