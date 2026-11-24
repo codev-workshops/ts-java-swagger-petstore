@@ -263,7 +263,8 @@ Feature: Store resource
 
   @placeOrder @boundary
   Scenario Outline: Place an order with boundary shipDate values
-    Given the request body is:
+    Given the resource at "/store/order/117" is deleted after the scenario
+    And the request body is:
       """
       { "id": 117, "petId": 1, "quantity": 1, "shipDate": "<shipDate>" }
       """
