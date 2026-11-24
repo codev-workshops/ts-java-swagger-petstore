@@ -81,6 +81,7 @@ public class UserSteps {
     }
 
     private void createUser(final String username, final String password) {
+        ctx.restoreAfterScenario("/user/" + TestContext.encode(username));
         final Response r = ctx.fixture("POST", "/user", userJson(username, password));
         assertEquals("Fixture user creation failed: " + r.asString(), 200, r.statusCode());
     }

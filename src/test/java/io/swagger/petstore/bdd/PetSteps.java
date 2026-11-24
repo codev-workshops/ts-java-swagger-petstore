@@ -30,6 +30,7 @@ public class PetSteps {
 
     @Given("no pet with id {long} exists")
     public void noPet(final long id) {
+        ctx.restoreAfterScenario("/pet/" + id);
         ctx.fixture("DELETE", "/pet/" + id, null);
         assertEquals(404, ctx.fixture("GET", "/pet/" + id, null).statusCode());
     }
@@ -38,6 +39,7 @@ public class PetSteps {
     public void noPetWithStatus(final String status) throws IOException {
         final Response found = ctx.fixture("GET", "/pet/findByStatus?status=" + status, null);
         for (final JsonNode pet : TestContext.JSON.readTree(found.asByteArray())) {
+            ctx.restoreAfterScenario("/pet/" + pet.path("id").asText());
             ctx.fixture("DELETE", "/pet/" + pet.path("id").asText(), null);
         }
     }
@@ -71,6 +73,7 @@ public class PetSteps {
     }
 
     private void createPet(final long id, final String name, final String status) {
+        ctx.restoreAfterScenario("/pet/" + id);
         final Response r = ctx.fixture("POST", "/pet", petJson(String.valueOf(id), name, status));
         assertEquals("Fixture pet creation failed: " + r.asString(), 200, r.statusCode());
     }

@@ -48,7 +48,7 @@ mvn test
 ```
 
 Reports are written to `target/cucumber-reports/`. To test a running server instead, pass
-`-Dpetstore.baseUrl=http://localhost:8080`. Scenarios tagged `@known-gap` describe spec behavior
+`-Dpetstore.baseUrl=http://localhost:8080` (use a disposable instance: fixtures write to it, then delete or restore what they touched). Scenarios tagged `@known-gap` describe spec behavior
 the server does not implement yet (auth enforcement, input validation, login checks) and are
 excluded by default; run them with `-Dcucumber.filter.tags="@known-gap"`.
 

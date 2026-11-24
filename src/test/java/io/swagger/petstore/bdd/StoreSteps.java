@@ -53,6 +53,7 @@ public class StoreSteps {
 
     @Given("no order with id {long} exists")
     public void noOrder(final long id) {
+        ctx.restoreAfterScenario("/store/order/" + id);
         ctx.fixture("DELETE", "/store/order/" + id, null);
         assertEquals(404, ctx.fixture("GET", "/store/order/" + id, null).statusCode());
     }
@@ -79,6 +80,7 @@ public class StoreSteps {
     }
 
     private void createOrder(final long id, final long petId, final String status, final int quantity) {
+        ctx.restoreAfterScenario("/store/order/" + id);
         final Response r = ctx.fixture("POST", "/store/order", orderJson(id, petId, status, quantity));
         assertEquals("Fixture order creation failed: " + r.asString(), 200, r.statusCode());
     }

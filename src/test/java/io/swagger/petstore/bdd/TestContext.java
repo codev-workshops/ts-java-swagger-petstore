@@ -46,6 +46,14 @@ public class TestContext {
     Response response;
     final Map<String, String> cleanupPaths = new LinkedHashMap<>();
 
+    /** Snapshots the resource at {@code path} so the @After hook deletes it and restores the original, if any. */
+    void restoreAfterScenario(final String path) {
+        if (!cleanupPaths.containsKey(path)) {
+            final Response existing = fixture("GET", path, null);
+            cleanupPaths.put(path, existing.statusCode() == 200 ? existing.asString() : null);
+        }
+    }
+
     void clearCredentials() {
         headers.remove("Authorization");
         headers.remove("api_key");

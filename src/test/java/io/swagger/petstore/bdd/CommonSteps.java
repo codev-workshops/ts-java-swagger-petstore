@@ -115,8 +115,7 @@ public class CommonSteps {
 
     @Given("the resource at {string} is deleted after the scenario")
     public void cleanupAfter(final String path) {
-        final io.restassured.response.Response existing = ctx.fixture("GET", path, null);
-        ctx.cleanupPaths.put(path, existing.statusCode() == 200 ? existing.asString() : null);
+        ctx.restoreAfterScenario(path);
     }
 
     /** Deletes resources a scenario created and restores any pre-existing (seeded) resource at that path. */
