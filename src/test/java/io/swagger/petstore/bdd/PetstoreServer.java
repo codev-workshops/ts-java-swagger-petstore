@@ -1,5 +1,8 @@
 package io.swagger.petstore.bdd;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.servlet.ServletContextHandler;
@@ -24,7 +27,7 @@ final class PetstoreServer {
             return baseUrl;
         }
         try {
-            final Server server = new Server(0);
+            final Server server = new Server(new InetSocketAddress(InetAddress.getLoopbackAddress(), 0));
             final ServletContextHandler context = new ServletContextHandler(ServletContextHandler.NO_SESSIONS);
             context.setContextPath("/");
             final ServletHolder holder = context.addServlet(ServletContainer.class, "/api/*");
