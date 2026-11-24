@@ -40,5 +40,17 @@ docker run  --name swaggerapi-petstore3 -d -p 8080:8080 swaggerapi/petstore3:uns
 Once started, you can navigate to http://localhost:8080/api/v3/openapi.json to view the Swagger Resource Listing.
 This tells you that the server is up and ready to demonstrate Swagger.
 
+### Running the API feature tests
+`features/*.feature` (pet, store, user) run as Cucumber tests against an embedded Petstore server:
+
+```
+mvn test
+```
+
+Reports are written to `target/cucumber-reports/`. To test a running server instead, pass
+`-Dpetstore.baseUrl=http://localhost:8080`. Scenarios tagged `@known-gap` describe spec behavior
+the server does not implement yet (auth enforcement, input validation, login checks) and are
+excluded by default; run them with `-Dcucumber.filter.tags="@known-gap"`.
+
 ### Using the UI
 There is an HTML5-based API tool bundled in this sample--you can view it it at [http://localhost:8080](http://localhost:8080). This lets you inspect the API using an interactive UI.  You can access the source of this code from [here](https://github.com/swagger-api/swagger-ui)
